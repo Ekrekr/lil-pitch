@@ -1,0 +1,13 @@
+User-agent: *
+# General Disallows - Keep what is private and shouldn't be indexed
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /settings/
+Disallow: /admin/
+Disallow: /*.json$
+
+# Explicitly disallow the 404 page (best practice)
+Disallow: /404.html
+
+# Sitemap locations (crucial for discovery)
+Sitemap: https://brickwiseai.com/sitemap.xml
