@@ -13,7 +13,7 @@ import {
 } from "@chakra-ui/react";
 import { LuCircleStop, LuPlay, LuTimerReset, LuUpload } from "react-icons/lu";
 import { useForm } from "react-hook-form";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Toaster, toaster } from "./components/ui/toaster";
 import Vapi from "@vapi-ai/web";
 import ReactMarkdown from "react-markdown";
@@ -22,6 +22,7 @@ const vapiAPIKey = import.meta.env.VITE_VAPI_API_KEY;
 if (!vapiAPIKey) {
   throw new Error("VITE_VAPI_API_KEY is not set");
 }
+const vapi = new Vapi(vapiAPIKey);
 
 export interface VapiTranscript {
   role: "user" | "assistant";
@@ -38,7 +39,6 @@ export function App() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [vapiTranscripts, setVapiTranscripts] = useState<VapiTranscript[]>([]);
   const [interviewFeedback, setInterviewFeedback] = useState<string>("");
-  // const [vapiCall, setVapiCall] = useState<Vapi | null>(null);
 
   // Keeping track of this state here is a hack.
   const [pitchContext, setPitchContext] = useState<string>();
@@ -49,31 +49,42 @@ export function App() {
     formState: { errors },
   } = useForm<{ pitchContext: string }>();
 
-  const vapi = new Vapi(vapiAPIKey);
-  vapi.on("error", (e) => {
-    toaster.error({
-      title: "Vapi Error",
-      description: e.message,
-    });
-  });
-  vapi.on("message", (message) => {
-    if (message.type === "transcript") {
-      if (
-        (message.role === "user" || message.role === "assistant") &&
-        (message.transcriptType === "final" ||
-          message.transcriptType === "partial")
-      ) {
-        setVapiTranscripts((currentTranscripts) => [
-          ...currentTranscripts,
-          {
-            role: message.role,
-            content: message.transcript,
-            transcriptType: message.transcriptType,
-          },
-        ]);
+  useEffect(() => {
+    // Define your event handler functions
+    const handleError = (e) => {
+      toaster.error({
+        title: "Vapi Error",
+        description: e.message,
+      });
+    };
+
+    const handleMessage = (message) => {
+      if (message.type === "transcript") {
+        if (
+          (message.role === "user" || message.role === "assistant") &&
+          (message.transcriptType === "final" ||
+            message.transcriptType === "partial")
+        ) {
+          setVapiTranscripts((currentTranscripts) => [
+            ...currentTranscripts,
+            {
+              role: message.role,
+              content: message.transcript,
+              transcriptType: message.transcriptType,
+            },
+          ]);
+        }
       }
-    }
-  });
+    };
+
+    vapi.on("error", handleError);
+    vapi.on("message", handleMessage);
+
+    return () => {
+      vapi.off("error", handleError);
+      vapi.off("message", handleMessage);
+    };
+  }, []);
 
   const startInterview = handleSubmit(async ({ pitchContext }) => {
     setPitchContext(pitchContext);
@@ -110,10 +121,10 @@ export function App() {
 
       const data = await response.json();
 
-      vapi.start("8ad8cd0a-e10d-4043-8b55-2b8ce92a0fd9", {
+      await vapi.start("8ad8cd0a-e10d-4043-8b55-2b8ce92a0fd9", {
         model: {
           provider: "openai",
-          model: "gpt-4",
+          model: "gpt-4.1-2025-04-14",
           messages: [
             {
               role: "system",
@@ -138,6 +149,8 @@ export function App() {
     toaster.info({
       title: "Stopping Vapi at the end of the next message",
     });
+    vapi.setMuted(true);
+    vapi.say("Thank you, goodbye", true);
     await vapi.stop();
     setAppState("interviewFinished");
 
