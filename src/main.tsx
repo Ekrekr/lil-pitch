@@ -4,6 +4,7 @@ import "@/index.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Provider } from "@/components/ui/provider";
 import { PageNotFound } from "@/page_not_found";
+import { App } from "./app";
 
 function Routing() {
   return (
@@ -12,6 +13,9 @@ function Routing() {
         {/* If change any routes, then change sitemap.xml. */}
         <Route path={"/"}>
           <Route index element={<App />} />
+
+          {/* All remaining non-matches go to not found. */}
+          <Route path="*" element={<PageNotFound />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -1,13 +1,11 @@
 import { Box, Button, Center, Heading, Link, VStack } from "@chakra-ui/react";
 import { LuHouse } from "react-icons/lu";
-import { LogoLink } from "./components/branding";
 
 export function PageNotFound() {
   return (
     <Box>
       <Center height="100vh" width="100vw" textAlign="center">
         <VStack>
-          <LogoLink />
           <Heading size="5xl" margin={0}>
             404 - Page Not Found
           </Heading>

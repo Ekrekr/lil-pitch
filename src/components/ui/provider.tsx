@@ -20,20 +20,8 @@ const SHADES = {
   "0": "#ffffff",
 };
 
-// Generated from the #900 value on
-// https://m2.material.io/design/color/the-color-system.html#tools-for-picking-colors
-const PRIMARY = {
-  "900": "#9e4839",
-  "800": "#b04f40",
-  "700": "#be5446",
-  "600": "#d05d4d",
-  "500": "#de654f",
-  "400": "#db6e63",
-  "300": "#d28581",
-  "200": "#e1a5a3",
-  "100": "#f5d3d6",
-  "50": "#fbedef",
-};
+// TODO(ekrekr): generate a better palette.
+const PRIMARY = SHADES;
 
 // These are the base styles used by the component system.
 const system = createSystem(defaultConfig, {
