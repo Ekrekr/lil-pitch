@@ -10,16 +10,17 @@ export interface CreateVCPromptResponse {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== "GET") {
+  if (req.method !== "POST") {
     return res.status(405).send("Method Not Allowed");
   }
 
-  const pitchContext = req.query.pitchContext as string;
+  const { pitchContext, pitchDeck } = req.body;
+
+  console.log(`Pitch context received: ${pitchContext}`);
+
   if (!pitchContext) {
     return res.status(400).send("Missing pitchContext parameter");
   }
-
-  const pitchDeck = req.query.pitchDeck as string;
   if (!pitchDeck) {
     return res.status(400).send("Missing pitchDeck parameter");
   }
@@ -27,7 +28,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const systemPrompt = await geminiGenerateContent({
     contents: [
       { text: `User Pitch Context: ${pitchContext}` },
-      { text: `User Pitch Deck: ${pitchDeck}` },
+      {
+        inlineData: {
+          mimeType: "application/pdf",
+          data: pitchDeck,
+        },
+      },
     ],
     config: {
       systemInstruction: [

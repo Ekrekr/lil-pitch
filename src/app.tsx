@@ -3,25 +3,82 @@ import {
   Button,
   Field,
   FileUpload,
-  Icon,
   Input,
   VStack,
-  Text,
   Heading,
-  HStack,
   Center,
 } from "@chakra-ui/react";
 import { LuUpload } from "react-icons/lu";
 import { useForm } from "react-hook-form";
+import { useState } from "react";
+import { toaster } from "./components/ui/toaster";
 
 export function App() {
+  const [pitchDeck, setPitchDeck] = useState<File>();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<{ pitchContext: string }>();
 
-  const onSubmit = handleSubmit((data) => console.log(data));
+  const onSubmit = handleSubmit(async ({ pitchContext }) => {
+    console.log("Form submitted");
+
+    if (!pitchDeck) {
+      toaster.error({
+        title: "Please select a pitch deck file.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    const reader = new FileReader();
+    reader.readAsDataURL(pitchDeck);
+    reader.onload = async () => {
+      try {
+        const base64PitchDeck = (reader.result as string).split(",")[1];
+
+        const response = await fetch("/api/create_vc_prompt", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            pitchContext,
+            pitchDeck: base64PitchDeck,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to create VC prompt.");
+        }
+
+        const data = await response.json();
+        console.log("Generated Prompt:", data.prompt);
+        toaster.success({
+          title: "Prompt generated successfully!",
+          description: "Check the console for the prompt.",
+        });
+      } catch (error) {
+        toaster.error({
+          title: "An error occurred.",
+          description: (error as Error).message,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    reader.onerror = (error) => {
+      toaster.error({
+        title: "Error reading file.",
+        description: error.toString(),
+      });
+      setIsLoading(false);
+    };
+  });
 
   return (
     <Center>
@@ -46,8 +103,12 @@ export function App() {
             </Field.Root>
 
             <Field.Root invalid={!!errors.pitchContext}>
-              <Field.Label>Your pitch deck</Field.Label>
-              <FileUpload.Root>
+              <Field.Label>Your pitch deck (PDFs only)</Field.Label>
+              <FileUpload.Root
+                onFileAccept={({ files }: { files: File[] }) => {
+                  setPitchDeck(files[0]);
+                }}
+              >
                 <FileUpload.HiddenInput />
                 <FileUpload.Trigger asChild>
                   <Button variant="outline" size="sm">
@@ -58,7 +119,9 @@ export function App() {
               </FileUpload.Root>
             </Field.Root>
 
-            <Button type="submit">Submit</Button>
+            <Button type="submit" loading={isLoading}>
+              Submit
+            </Button>
           </VStack>
         </form>
       </Box>

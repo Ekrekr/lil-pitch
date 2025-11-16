@@ -6,7 +6,6 @@ import {
   Toast,
   createToaster,
 } from "@chakra-ui/react";
-import { HelpLink } from "@/routes";
 
 export const toaster = createToaster({
   placement: "bottom",
@@ -19,11 +18,7 @@ export function throwInternalError(context: string, fullError?: Error) {
   const description = fullError ? `${context}: ${fullError?.message}` : context;
   toaster.create({
     // TODO(ekrekr): add a report link.
-    title: (
-      <>
-        Unexpected error, please <HelpLink />.
-      </>
-    ),
+    title: <>Unexpected error.</>,
     description,
     type: "error",
     duration: 5000,

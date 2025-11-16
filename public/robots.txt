@@ -10,4 +10,4 @@ Disallow: /*.json$
 Disallow: /404.html
 
 # Sitemap locations (crucial for discovery)
-Sitemap: https://brickwiseai.com/sitemap.xml
+Sitemap: https://lilpitch.com/sitemap.xml
