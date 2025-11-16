@@ -13,15 +13,13 @@ function Routing() {
     <BrowserRouter>
       <Routes>
         {/* If change any routes, then change sitemap.xml. */}
-        <Route path={"/"}>
-          <Route index element={<App />} />
+        <Route index element={<App />} />
 
-          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-          <Route path="/tos" element={<TermsOfService />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/tos" element={<TermsOfService />} />
 
-          {/* All remaining non-matches go to not found. */}
-          <Route path="*" element={<PageNotFound />} />
-        </Route>
+        {/* All remaining non-matches go to not found. */}
+        <Route path="*" element={<PageNotFound />} />
       </Routes>
     </BrowserRouter>
   );
