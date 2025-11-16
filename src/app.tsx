@@ -146,10 +146,6 @@ export function App() {
 
   const finishInterview = async () => {
     setIsLoading(true);
-    toaster.info({
-      title: "Stopping Vapi at the end of the next message",
-    });
-    vapi.setMuted(true);
     await vapi.stop();
     setAppState("interviewFinished");
 
@@ -236,16 +232,22 @@ export function App() {
                   Start
                 </Button>
               </HStack>
+              {isLoading && <Text>Preparing agent...</Text>}
             </VStack>
           </form>
         )}
 
         {appState === "interviewing" && (
           <Center width="100%">
-            <Button loading={isLoading} onClick={finishInterview}>
-              <LuCircleStop />
-              Stop
-            </Button>
+            <VStack>
+              <Button loading={isLoading} onClick={finishInterview}>
+                <LuCircleStop />
+                Stop and get feedback
+              </Button>
+
+              <Text color="fg.muted">30 minutes call limit</Text>
+              <Text color="fg.muted">You'll be asked about 5 questions</Text>
+            </VStack>
           </Center>
         )}
 
@@ -278,7 +280,10 @@ export function App() {
         )}
 
         {(appState === "interviewing" || appState === "interviewFinished") && (
-          <VapiTranscripts vapiTranscripts={vapiTranscripts} />
+          <VapiTranscripts
+            vapiTranscripts={vapiTranscripts}
+            reversed={appState === "interviewing"}
+          />
         )}
       </Box>
     </Center>
@@ -287,8 +292,10 @@ export function App() {
 
 function VapiTranscripts({
   vapiTranscripts,
+  reversed,
 }: {
   vapiTranscripts: VapiTranscript[];
+  reversed: boolean;
 }) {
   if (!vapiTranscripts?.length) {
     return <></>;
@@ -322,6 +329,10 @@ function VapiTranscripts({
       // This partial segment is part of a new speech bubble.
       filteredTranscripts.push({ ...maybePartialTranscript });
     }
+  }
+
+  if (reversed) {
+    filteredTranscripts.reverse();
   }
 
   return (

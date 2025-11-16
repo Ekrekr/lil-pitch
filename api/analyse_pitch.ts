@@ -115,18 +115,10 @@ export async function geminiGenerateContent({
 }
 
 function unwrapMarkdownCodeBlocks(text: string): string {
-  // This regex finds blocks starting with ```[language]
-  // and ending with ```, capturing only the content in between.
-  //
-  // - ^\`\`\`[a-z]*\s?  -> Matches the opening ```, optional language, and newline
-  // - ([\s\S]*?)       -> Non-greedily captures all content (including newlines)
-  // - ^\`\`\`           -> Matches the closing ``` on a new line
-  //
-  // Flags: 'gm' = global (all matches) and multiline (^ matches start of line)
+  const lines = text.split("\n");
+  if (lines.length < 3) {
+    return lines.join("\n");
+  }
 
-  const regex = /^```[a-z]*\s?\n([\s\S]*?)\n^```/gm;
-
-  // The '$1' in the replacement string refers to the first captured group
-  // (the content inside the fences).
-  return text.replace(regex, "$1");
+  return lines.slice(1, -1).join("\n");
 }
