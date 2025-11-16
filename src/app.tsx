@@ -25,6 +25,12 @@ export function App() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isVapiRunning, setIsVapiRunning] = useState<boolean>(false);
 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<{ pitchContext: string }>();
+
   const vapi = new Vapi(vapiAPIKey);
   vapi.on("error", (e) => {
     toaster.error({
@@ -32,12 +38,6 @@ export function App() {
       description: e.message,
     });
   });
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<{ pitchContext: string }>();
 
   const onSubmit = handleSubmit(async ({ pitchContext }) => {
     if (!pitchDeck) {
@@ -98,7 +98,6 @@ export function App() {
         });
       } finally {
         setIsLoading(false);
-        setIsVapiRunning(false);
       }
     };
     reader.onerror = (error) => {
@@ -107,7 +106,6 @@ export function App() {
         description: error.toString(),
       });
       setIsLoading(false);
-      setIsVapiRunning(false);
     };
   });
 

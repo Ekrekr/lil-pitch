@@ -52,4 +52,4 @@ supabase/.env
 
 # Vercel specific ignores (optional, for local development)
 .vercel/
-s
+.vercel

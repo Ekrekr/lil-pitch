@@ -1,14 +1,5 @@
 {
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/src/api/$1"
-    }
-  ],
+  "rewrites": [],
   "headers": [
     {
       "source": "/(.*)",

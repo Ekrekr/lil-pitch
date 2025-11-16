@@ -1,7 +1,10 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2023"],
+    "lib": [
+      "ES2023",
+      "esnext.disposable" // Fixes some /api route complaints.
+    ],
     "module": "ESNext",
     "skipLibCheck": true,
 
