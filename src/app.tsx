@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 import { Toaster, toaster } from "./components/ui/toaster";
 import Vapi from "@vapi-ai/web";
 import ReactMarkdown from "react-markdown";
+import { Footer } from "./components/footer";
 
 const vapiAPIKey = import.meta.env.VITE_VAPI_API_KEY;
 if (!vapiAPIKey) {
@@ -186,106 +187,110 @@ export function App() {
     <Center>
       <Toaster />
 
-      <Box maxWidth="48em" padding="2em">
-        <Box textAlign={"center"} pb="2em">
-          <Heading size="4xl">Lil Pitch</Heading>
-          <Heading size="xl" color="gray.500">
-            An AI agent to help you practice your startup pitch
-          </Heading>
-        </Box>
+      <VStack>
+        <Box maxWidth="48em" padding="2em" minHeight="90vh">
+          <Box textAlign={"center"} pb="2em">
+            <Heading size="4xl">Lil Pitch</Heading>
+            <Heading size="xl" color="gray.500">
+              An AI agent to help you practice your startup pitch
+            </Heading>
+          </Box>
 
-        {appState === "detailsInput" && (
-          <form onSubmit={startInterview}>
-            <VStack gap={8}>
-              <Field.Root invalid={!!errors.pitchContext}>
-                <Field.Label>Pitch Context</Field.Label>
-                <Input {...register("pitchContext")} />
-                <Field.ErrorText>
-                  {errors.pitchContext?.message}
-                </Field.ErrorText>
-                <Field.HelperText>
-                  Who you are, what your role is, who is interviewing you, and
-                  any additional context that you'd like to add.
-                </Field.HelperText>
-              </Field.Root>
+          {appState === "detailsInput" && (
+            <form onSubmit={startInterview}>
+              <VStack gap={8}>
+                <Field.Root invalid={!!errors.pitchContext}>
+                  <Field.Label>Pitch Context</Field.Label>
+                  <Input {...register("pitchContext")} />
+                  <Field.ErrorText>
+                    {errors.pitchContext?.message}
+                  </Field.ErrorText>
+                  <Field.HelperText>
+                    Who you are, what your role is, who is interviewing you, and
+                    any additional context that you'd like to add.
+                  </Field.HelperText>
+                </Field.Root>
 
-              <Field.Root invalid={!!errors.pitchContext}>
-                <Field.Label>Your pitch deck (PDFs only)</Field.Label>
-                <FileUpload.Root
-                  onFileAccept={({ files }: { files: File[] }) => {
-                    setPitchDeck(files[0]);
+                <Field.Root invalid={!!errors.pitchContext}>
+                  <Field.Label>Your pitch deck (PDFs only)</Field.Label>
+                  <FileUpload.Root
+                    onFileAccept={({ files }: { files: File[] }) => {
+                      setPitchDeck(files[0]);
+                    }}
+                  >
+                    <FileUpload.HiddenInput />
+                    <FileUpload.Trigger asChild>
+                      <Button variant="outline" size="sm">
+                        <LuUpload /> Upload file
+                      </Button>
+                    </FileUpload.Trigger>
+                    <FileUpload.List />
+                  </FileUpload.Root>
+                </Field.Root>
+
+                <HStack>
+                  <Button type="submit" loading={isLoading}>
+                    <LuPlay />
+                    Start
+                  </Button>
+                </HStack>
+                {isLoading && <Text>Preparing agent...</Text>}
+              </VStack>
+            </form>
+          )}
+
+          {appState === "interviewing" && (
+            <Center width="100%">
+              <VStack>
+                <Button loading={isLoading} onClick={finishInterview}>
+                  <LuCircleStop />
+                  Stop and get feedback
+                </Button>
+
+                <Text color="fg.muted">30 minutes call limit</Text>
+                <Text color="fg.muted">You'll be asked about 5 questions</Text>
+              </VStack>
+            </Center>
+          )}
+
+          {appState === "interviewFinished" && (
+            <>
+              <Center width="100%">
+                <Button
+                  loading={isLoading}
+                  onClick={async () => {
+                    setVapiTranscripts([]);
+                    setInterviewFeedback("");
+                    setAppState("detailsInput");
                   }}
                 >
-                  <FileUpload.HiddenInput />
-                  <FileUpload.Trigger asChild>
-                    <Button variant="outline" size="sm">
-                      <LuUpload /> Upload file
-                    </Button>
-                  </FileUpload.Trigger>
-                  <FileUpload.List />
-                </FileUpload.Root>
-              </Field.Root>
-
-              <HStack>
-                <Button type="submit" loading={isLoading}>
-                  <LuPlay />
-                  Start
+                  <LuTimerReset />
+                  Reset
                 </Button>
-              </HStack>
-              {isLoading && <Text>Preparing agent...</Text>}
-            </VStack>
-          </form>
-        )}
+              </Center>
+              <Box marginBottom="2em" marginTop="2em">
+                <Heading size="lg">Interview Feedback</Heading>
+                {interviewFeedback ? (
+                  <ReactMarkdown>{interviewFeedback}</ReactMarkdown>
+                ) : (
+                  <Center width="100%">
+                    <Spinner />
+                  </Center>
+                )}
+              </Box>
+            </>
+          )}
 
-        {appState === "interviewing" && (
-          <Center width="100%">
-            <VStack>
-              <Button loading={isLoading} onClick={finishInterview}>
-                <LuCircleStop />
-                Stop and get feedback
-              </Button>
-
-              <Text color="fg.muted">30 minutes call limit</Text>
-              <Text color="fg.muted">You'll be asked about 5 questions</Text>
-            </VStack>
-          </Center>
-        )}
-
-        {appState === "interviewFinished" && (
-          <>
-            <Center width="100%">
-              <Button
-                loading={isLoading}
-                onClick={async () => {
-                  setVapiTranscripts([]);
-                  setInterviewFeedback("");
-                  setAppState("detailsInput");
-                }}
-              >
-                <LuTimerReset />
-                Reset
-              </Button>
-            </Center>
-            <Box marginBottom="2em" marginTop="2em">
-              <Heading size="lg">Interview Feedback</Heading>
-              {interviewFeedback ? (
-                <ReactMarkdown>{interviewFeedback}</ReactMarkdown>
-              ) : (
-                <Center width="100%">
-                  <Spinner />
-                </Center>
-              )}
-            </Box>
-          </>
-        )}
-
-        {(appState === "interviewing" || appState === "interviewFinished") && (
-          <VapiTranscripts
-            vapiTranscripts={vapiTranscripts}
-            reversed={appState === "interviewing"}
-          />
-        )}
-      </Box>
+          {(appState === "interviewing" ||
+            appState === "interviewFinished") && (
+            <VapiTranscripts
+              vapiTranscripts={vapiTranscripts}
+              reversed={appState === "interviewing"}
+            />
+          )}
+        </Box>
+        <Footer />
+      </VStack>
     </Center>
   );
 }
