@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 
 export function Footer() {
   return (
-    <Center height="10vh">
+    <Center height="10vh" padding="1vh 0">
       <HStack gap={4}>
         <Link href="/privacy-policy">
           <Button variant="ghost">Privacy Policy</Button>

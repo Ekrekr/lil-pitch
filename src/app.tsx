@@ -188,7 +188,7 @@ export function App() {
       <Toaster />
 
       <VStack>
-        <Box maxWidth="48em" padding="2em" minHeight="90vh">
+        <Box maxWidth="48em" padding="2em" minHeight="85vh">
           <Box textAlign={"center"} pb="2em">
             <Heading size="4xl">Lil Pitch</Heading>
             <Heading size="xl" color="gray.500">

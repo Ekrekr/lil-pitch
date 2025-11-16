@@ -7,7 +7,7 @@ export function PrivacyPolicy() {
   return (
     <Center>
       <VStack>
-        <Box maxWidth="48em" padding="2em" minHeight="95vh">
+        <Box maxWidth="48em" padding="2em" minHeight="85vh">
           <Header />
           <ReactMarkdown>
             {`# Privacy Policy for Lil Pitch
