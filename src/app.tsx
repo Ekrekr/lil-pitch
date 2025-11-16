@@ -9,30 +9,39 @@ import {
   Center,
   Text,
   HStack,
-  Card,
+  Spinner,
 } from "@chakra-ui/react";
-import { LuCircleStop, LuPlay, LuUpload } from "react-icons/lu";
+import { LuCircleStop, LuPlay, LuTimerReset, LuUpload } from "react-icons/lu";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 import { Toaster, toaster } from "./components/ui/toaster";
 import Vapi from "@vapi-ai/web";
+import ReactMarkdown from "react-markdown";
 
 const vapiAPIKey = import.meta.env.VITE_VAPI_API_KEY;
 if (!vapiAPIKey) {
   throw new Error("VITE_VAPI_API_KEY is not set");
 }
 
-interface VapiTranscript {
+export interface VapiTranscript {
   role: "user" | "assistant";
   content: string;
   transcriptType: "final" | "partial";
 }
 
 export function App() {
+  const [appState, setAppState] = useState<
+    "detailsInput" | "interviewing" | "interviewFinished"
+  >("detailsInput");
+
   const [pitchDeck, setPitchDeck] = useState<File>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isVapiRunning, setIsVapiRunning] = useState<boolean>(false);
-  const [vapiTranscripts, setVapiTranscripts] = useState<VapiTranscript[]>();
+  const [vapiTranscripts, setVapiTranscripts] = useState<VapiTranscript[]>([]);
+  const [interviewFeedback, setInterviewFeedback] = useState<string>("");
+  // const [vapiCall, setVapiCall] = useState<Vapi | null>(null);
+
+  // Keeping track of this state here is a hack.
+  const [pitchContext, setPitchContext] = useState<string>();
 
   const {
     register,
@@ -66,7 +75,8 @@ export function App() {
     }
   });
 
-  const onSubmit = handleSubmit(async ({ pitchContext }) => {
+  const startInterview = handleSubmit(async ({ pitchContext }) => {
+    setPitchContext(pitchContext);
     setVapiTranscripts([]);
 
     if (!pitchDeck) {
@@ -78,65 +88,91 @@ export function App() {
 
     setIsLoading(true);
 
-    const reader = new FileReader();
-    reader.readAsDataURL(pitchDeck);
-    reader.onload = async () => {
-      try {
-        const base64PitchDeck = (reader.result as string).split(",")[1];
+    try {
+      const base64PitchDeck = await getBase64FromFile(pitchDeck);
 
-        const response = await fetch("/api/create_vc_prompt", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            pitchContext,
-            pitchDeck: base64PitchDeck,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(
-            `Failed to create VC prompt, error code: ${response.statusText}`
-          );
-        }
-
-        const data = await response.json();
-        toaster.success({
-          title: "Prompt generated successfully!",
-          description: "Check the console for the prompt.",
-        });
-
-        vapi.start("8ad8cd0a-e10d-4043-8b55-2b8ce92a0fd9", {
-          model: {
-            provider: "openai",
-            model: "gpt-4",
-            messages: [
-              {
-                role: "system",
-                content: data.prompt,
-              },
-            ],
-          },
-        });
-        setIsVapiRunning(true);
-      } catch (error) {
-        toaster.error({
-          title: "An error occurred.",
-          description: (error as Error).message,
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    reader.onerror = (error) => {
-      toaster.error({
-        title: "Error reading file.",
-        description: error.toString(),
+      const response = await fetch("/api/create_vc_prompt", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          pitchContext,
+          pitchDeck: base64PitchDeck,
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to create VC prompt, error code: ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+
+      vapi.start("8ad8cd0a-e10d-4043-8b55-2b8ce92a0fd9", {
+        model: {
+          provider: "openai",
+          model: "gpt-4",
+          messages: [
+            {
+              role: "system",
+              content: data.prompt,
+            },
+          ],
+        },
+      });
+      setAppState("interviewing");
+    } catch (error) {
+      toaster.error({
+        title: "An error occurred.",
+        description: (error as Error).message,
+      });
+    } finally {
       setIsLoading(false);
-    };
+    }
   });
+
+  const finishInterview = async () => {
+    setIsLoading(true);
+    toaster.info({
+      title: "Stopping Vapi at the end of the next message",
+    });
+    await vapi.stop();
+    setAppState("interviewFinished");
+
+    try {
+      const base64PitchDeck = await getBase64FromFile(pitchDeck);
+
+      const response = await fetch("/api/analyse_pitch", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          pitchContext,
+          pitchDeck: base64PitchDeck,
+          transcript: JSON.stringify(vapiTranscripts),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to analyse pitch, error code: ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+      setInterviewFeedback(data.pitchAnalysis);
+    } catch (error) {
+      toaster.error({
+        title: "An error occurred.",
+        description: (error as Error).message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Center>
@@ -150,23 +186,8 @@ export function App() {
           </Heading>
         </Box>
 
-        {isVapiRunning ? (
-          <Button
-            loading={isLoading}
-            disabled={!isVapiRunning}
-            onClick={() => {
-              toaster.info({
-                title: "Stopping Vapi at the end of the next message",
-              });
-              vapi.stop();
-              setIsVapiRunning(false);
-            }}
-          >
-            <LuCircleStop />
-            Stop
-          </Button>
-        ) : (
-          <form onSubmit={onSubmit}>
+        {appState === "detailsInput" && (
+          <form onSubmit={startInterview}>
             <VStack gap={8}>
               <Field.Root invalid={!!errors.pitchContext}>
                 <Field.Label>Pitch Context</Field.Label>
@@ -198,11 +219,7 @@ export function App() {
               </Field.Root>
 
               <HStack>
-                <Button
-                  type="submit"
-                  loading={isLoading}
-                  disabled={isVapiRunning}
-                >
+                <Button type="submit" loading={isLoading}>
                   <LuPlay />
                   Start
                 </Button>
@@ -211,7 +228,46 @@ export function App() {
           </form>
         )}
 
-        <VapiTranscripts vapiTranscripts={vapiTranscripts} />
+        {appState === "interviewing" && (
+          <Center width="100%">
+            <Button loading={isLoading} onClick={finishInterview}>
+              <LuCircleStop />
+              Stop
+            </Button>
+          </Center>
+        )}
+
+        {appState === "interviewFinished" && (
+          <>
+            <Center width="100%">
+              <Button
+                loading={isLoading}
+                onClick={async () => {
+                  setVapiTranscripts([]);
+                  setInterviewFeedback("");
+                  setAppState("detailsInput");
+                }}
+              >
+                <LuTimerReset />
+                Reset
+              </Button>
+            </Center>
+            <Box marginBottom="2em" marginTop="2em">
+              <Heading size="lg">Interview Feedback</Heading>
+              {interviewFeedback ? (
+                <ReactMarkdown>{interviewFeedback}</ReactMarkdown>
+              ) : (
+                <Center width="100%">
+                  <Spinner />
+                </Center>
+              )}
+            </Box>
+          </>
+        )}
+
+        {(appState === "interviewing" || appState === "interviewFinished") && (
+          <VapiTranscripts vapiTranscripts={vapiTranscripts} />
+        )}
       </Box>
     </Center>
   );
@@ -257,10 +313,11 @@ function VapiTranscripts({
   }
 
   return (
-    <VStack gap={4} mt="2em">
-      <Heading>Transcript</Heading>
-      {filteredTranscripts.map((message) => (
+    <VStack gap={4} mt="2em" width="100%">
+      <Heading size="lg">Transcript</Heading>
+      {filteredTranscripts.map((message, index) => (
         <Box
+          key={`vapi-transcript-${index}`}
           backgroundColor="gray.100"
           padding="0.5em"
           borderRadius="8px"
@@ -274,4 +331,34 @@ function VapiTranscripts({
       ))}
     </VStack>
   );
+}
+
+function getBase64FromFile(file: File | Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      try {
+        // Get the result, which is a data URL (e.g., "data:image/png;base64,iVBORw...")
+        const dataUrl = reader.result as string;
+        // Split off the prefix to get only the Base64 content.
+        const base64 = dataUrl.split(",")[1];
+
+        if (base64) {
+          resolve(base64);
+        } else {
+          // This happens if the split fails or the file is empty.
+          reject(new Error("Failed to parse Base64 data from file."));
+        }
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    reader.onerror = (error) => {
+      reject(error);
+    };
+
+    reader.readAsDataURL(file);
+  });
 }
