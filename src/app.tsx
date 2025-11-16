@@ -7,15 +7,31 @@ import {
   VStack,
   Heading,
   Center,
+  HStack,
 } from "@chakra-ui/react";
-import { LuUpload } from "react-icons/lu";
+import { LuCircleStop, LuPlay, LuUpload } from "react-icons/lu";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
-import { toaster } from "./components/ui/toaster";
+import { Toaster, toaster } from "./components/ui/toaster";
+import Vapi from "@vapi-ai/web";
+
+const vapiAPIKey = import.meta.env.VITE_VAPI_API_KEY;
+if (!vapiAPIKey) {
+  throw new Error("VITE_VAPI_API_KEY is not set");
+}
 
 export function App() {
   const [pitchDeck, setPitchDeck] = useState<File>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isVapiRunning, setIsVapiRunning] = useState<boolean>(false);
+
+  const vapi = new Vapi(vapiAPIKey);
+  vapi.on("error", (e) => {
+    toaster.error({
+      title: "Vapi Error",
+      description: e.message,
+    });
+  });
 
   const {
     register,
@@ -24,8 +40,6 @@ export function App() {
   } = useForm<{ pitchContext: string }>();
 
   const onSubmit = handleSubmit(async ({ pitchContext }) => {
-    console.log("Form submitted");
-
     if (!pitchDeck) {
       toaster.error({
         title: "Please select a pitch deck file.",
@@ -53,15 +67,30 @@ export function App() {
         });
 
         if (!response.ok) {
-          throw new Error("Failed to create VC prompt.");
+          throw new Error(
+            `Failed to create VC prompt, error code: ${response.statusText}`
+          );
         }
 
         const data = await response.json();
-        console.log("Generated Prompt:", data.prompt);
         toaster.success({
           title: "Prompt generated successfully!",
           description: "Check the console for the prompt.",
         });
+
+        vapi.start("8ad8cd0a-e10d-4043-8b55-2b8ce92a0fd9", {
+          model: {
+            provider: "openai",
+            model: "gpt-4",
+            messages: [
+              {
+                role: "system",
+                content: data.prompt,
+              },
+            ],
+          },
+        });
+        setIsVapiRunning(true);
       } catch (error) {
         toaster.error({
           title: "An error occurred.",
@@ -69,6 +98,7 @@ export function App() {
         });
       } finally {
         setIsLoading(false);
+        setIsVapiRunning(false);
       }
     };
     reader.onerror = (error) => {
@@ -77,15 +107,18 @@ export function App() {
         description: error.toString(),
       });
       setIsLoading(false);
+      setIsVapiRunning(false);
     };
   });
 
   return (
     <Center>
-      <Box maxWidth="32em" padding="2em">
+      <Toaster />
+
+      <Box maxWidth="48em" padding="2em">
         <Box textAlign={"center"} pb="2em">
           <Heading size="4xl">Lil Pitch</Heading>
-          <Heading size="xl">
+          <Heading size="xl" color="gray.800">
             An AI agent to help you practice your startup pitch
           </Heading>
         </Box>
@@ -119,9 +152,31 @@ export function App() {
               </FileUpload.Root>
             </Field.Root>
 
-            <Button type="submit" loading={isLoading}>
-              Submit
-            </Button>
+            <HStack>
+              <Button
+                type="submit"
+                loading={isLoading}
+                disabled={isVapiRunning}
+              >
+                <LuPlay />
+                Start
+              </Button>
+
+              <Button
+                loading={isLoading}
+                disabled={!isVapiRunning}
+                onClick={() => {
+                  toaster.info({
+                    title: "Stopping Vapi at the end of the next message",
+                  });
+                  vapi.stop();
+                  setIsVapiRunning(false);
+                }}
+              >
+                <LuCircleStop />
+                Stop
+              </Button>
+            </HStack>
           </VStack>
         </form>
       </Box>
