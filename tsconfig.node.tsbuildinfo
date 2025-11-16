@@ -1,1 +1,8 @@
-{"root":["./vite.config.ts"],"version":"5.9.3"}
+{
+  "root": [
+    "./vite.config.ts",
+    "./api/analyse_pitch.ts",
+    "./api/create_vc_prompt.ts"
+  ],
+  "version": "5.9.3"
+}

@@ -150,7 +150,6 @@ export function App() {
       title: "Stopping Vapi at the end of the next message",
     });
     vapi.setMuted(true);
-    vapi.say("Thank you, goodbye", true);
     await vapi.stop();
     setAppState("interviewFinished");
 
